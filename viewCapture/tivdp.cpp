@@ -64,10 +64,10 @@ int SAL;									// Sprite Allocation Table
 int SDT;									// Sprite Descriptor Table
 int CTsize;									// Color Table size in Bitmap Mode
 int PDTsize;								// Pattern Descriptor Table size in Bitmap Mode
-Byte VDPREG[8];								// VDP read-only registers
+int VDPREG[8];								// VDP read-only registers (negative means hard-coded offset)
 int modeDrawn;
 
-Byte VDP[16*1024+128];						// Video RAM (16k), +128 bytes to account for TIFILES header
+Byte VDP[16*1024+1024];						// Video RAM (16k), + padding for load and default SIT
 
 int bEnable80Columns=1;						// Enable the beginnings of the 80 column mode - to replace someday with F18A
 
@@ -112,46 +112,70 @@ int pixelMask(int addr, int F18ASpriteColorLine[]);
 void gettables(int reg0)
 {
 	/* Screen Image Table */
-	if ((bEnable80Columns) && (reg0 & 0x04)) {
-		// in 80-column text mode, the two LSB are some kind of mask that we here ignore - the rest of the register is larger
-		// The 9938 requires that those bits be set to 11, therefore, the F18A treats 11 and 00 both as 00, but treats
-		// 01 and 10 as their actual values. (Okay, that is a bit weird.) That said, the F18A still only honours the least
-		// significant 4 bits and ignores the rest (the 9938 reads 7 bits instead of 4, masking as above).
-		// So anyway, the goal is F18A support, but the 9938 mask would be 0x7C instead of 0x0C, and the shift was only 8?
-		// TODO: check the 9938 datasheet - did Matthew get it THAT wrong? Or does the math work out anyway?
-		// Anyway, this works for table at >0000, which is most of them.
-		SIT=(VDPREG[2]&0x0F);
-		if ((SIT&0x03)==0x03) SIT&=0x0C;	// mask off a 0x03 pattern, 0x00,0x01,0x02 left alone
-		SIT<<=10;
+	if (VDPREG[2] < 0) {
+		SIT = -VDPREG[2];
 	} else {
-		SIT=((VDPREG[2]&0x0f)<<10);
+		if ((bEnable80Columns) && (reg0 & 0x04)) {
+			// in 80-column text mode, the two LSB are some kind of mask that we here ignore - the rest of the register is larger
+			// The 9938 requires that those bits be set to 11, therefore, the F18A treats 11 and 00 both as 00, but treats
+			// 01 and 10 as their actual values. (Okay, that is a bit weird.) That said, the F18A still only honours the least
+			// significant 4 bits and ignores the rest (the 9938 reads 7 bits instead of 4, masking as above).
+			// So anyway, the goal is F18A support, but the 9938 mask would be 0x7C instead of 0x0C, and the shift was only 8?
+			// TODO: check the 9938 datasheet - did Matthew get it THAT wrong? Or does the math work out anyway?
+			// Anyway, this works for table at >0000, which is most of them.
+			SIT=(VDPREG[2]&0x0F);
+			if ((SIT&0x03)==0x03) SIT&=0x0C;	// mask off a 0x03 pattern, 0x00,0x01,0x02 left alone
+			SIT<<=10;
+		} else {
+			SIT=((VDPREG[2]&0x0f)<<10);
+		}
 	}
+
 	/* Sprite Attribute List */
-	SAL=((VDPREG[5]&0x7f)<<7);
+	if (VDPREG[5] < 0) {
+		SAL = -VDPREG[5];
+	} else {
+		SAL=((VDPREG[5]&0x7f)<<7);
+	}
+
 	/* Sprite Descriptor Table */
-	SDT=((VDPREG[6]&0x07)<<11);
+	if (VDPREG[6] < 0) {
+		SDT = -VDPREG[6];
+	} else {
+		SDT=((VDPREG[6]&0x07)<<11);
+	}
 
 	// The normal math for table addresses isn't quite right in bitmap mode
 	// The PDT and CT have different math and a size setting
-	if (reg0&0x02) {
-		// this is for bitmap modes
-		CT=(VDPREG[3]&0x80) ? 0x2000 : 0;
-		CTsize=((VDPREG[3]&0x7f)<<6)|0x3f;
-		PDT=(VDPREG[4]&0x04) ? 0x2000 : 0;
-		PDTsize=((VDPREG[4]&0x03)<<11);
-		if (VDPREG[1]&0x10) {			// in Bitmap text, we fill bits with 1, as there is no color table
-			PDTsize|=0x7ff;
+	if ((VDPREG[3] > 0) && (VDPREG[4] >= 0)) {
+		if (reg0&0x02) {
+			// this is for bitmap modes
+			CT=(VDPREG[3]&0x80) ? 0x2000 : 0;
+			PDT=(VDPREG[4]&0x04) ? 0x2000 : 0;
+			CTsize=((VDPREG[3]&0x7f)<<6)|0x3f;
+			PDTsize=((VDPREG[4]&0x03)<<11);
+			if (VDPREG[1]&0x10) {			// in Bitmap text, we fill bits with 1, as there is no color table
+				PDTsize|=0x7ff;
+			} else {
+				PDTsize|=(CTsize&0x7ff);	// In other bitmap modes we get bits from the color table mask
+			}
 		} else {
-			PDTsize|=(CTsize&0x7ff);	// In other bitmap modes we get bits from the color table mask
+			// this is for non-bitmap modes
+			/* Colour Table */
+			CT=VDPREG[3]<<6;
+			/* Pattern Descriptor Table */
+			PDT=((VDPREG[4]&0x07)<<11);
+			CTsize=32;
+			PDTsize=2048;
 		}
 	} else {
-		// this is for non-bitmap modes
-		/* Colour Table */
-		CT=VDPREG[3]<<6;
-		/* Pattern Descriptor Table */
-		PDT=((VDPREG[4]&0x07)<<11);
-		CTsize=32;
-		PDTsize=2048;
+		// don't touch sizes
+		if (VDPREG[3] < 0) {
+			CT = -VDPREG[3];
+		}
+		if (VDPREG[4] < 0) {
+			PDT = -VDPREG[4];
+		}
 	}
 }
 
@@ -1196,6 +1220,11 @@ bool LoadBuffer() {
 				// probably is
 				memmove(VDP, &VDP[128], 16*1024);
 			}
+		}
+
+		// after load, put a default bitmap SIT at 0x4000 for testing files
+		for (int i=0; i<768; ++i) {
+			VDP[i+0x4000]=i&0xff;
 		}
 	}
 

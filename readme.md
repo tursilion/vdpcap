@@ -1,4 +1,4 @@
-20150403
+20230330
 
 This tool takes a VDP dump from a TMS9918A video chip (usually from an emulator) and lets you quickly recreate the original display and save it as an image.
 
@@ -32,3 +32,5 @@ There are additional options under the register numbers:
 - No sprite disables the sprite layer
 - No background disables the background layer
 - 80 column hack may allow some F18A and some (16k!) 9938 80 column screens to display
+
+You can go one further and type arbitrary addresses in some of the fields. This will not reflect valid VDP register settings, but can be used to verify the layout of binary files, for instance. If you need a stock bitmap SIT, enter the invalid address 4000.

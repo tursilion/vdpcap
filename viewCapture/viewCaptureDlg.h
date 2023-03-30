@@ -49,6 +49,7 @@ public:
 	void UpdateList(int ctrl, char *str, int which);
 	void UpdateReg(int idx);
 	void updateDropdown(int ctrl, int reg);
+	void forceDropdown(int ctrl, int reg);
 
 	afx_msg void OnCbnSelchangeLstdefaults();
 	afx_msg void OnEnChangeTxtr0();
@@ -71,4 +72,9 @@ public:
 	afx_msg void OnBnClickedChkmag();
 	afx_msg void OnCbnSelchangeLsttxtcol();
 	afx_msg void OnCbnSelchangeLstscrncol();
+	afx_msg void OnCbnEditchangeLstsit();
+	afx_msg void OnCbnEditchangeLstct();
+	afx_msg void OnCbnEditchangeLstpdt();
+	afx_msg void OnCbnEditchangeLstsal();
+	afx_msg void OnCbnEditchangeLstsdt();
 };

@@ -74,6 +74,11 @@ BEGIN_MESSAGE_MAP(CviewCaptureDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CHKMAG, &CviewCaptureDlg::OnBnClickedChkmag)
 	ON_CBN_SELCHANGE(IDC_LSTTXTCOL, &CviewCaptureDlg::OnCbnSelchangeLsttxtcol)
 	ON_CBN_SELCHANGE(IDC_LSTSCRNCOL, &CviewCaptureDlg::OnCbnSelchangeLstscrncol)
+	ON_CBN_EDITCHANGE(IDC_LSTSIT,&CviewCaptureDlg::OnCbnEditchangeLstsit)
+	ON_CBN_EDITCHANGE(IDC_LSTCT,&CviewCaptureDlg::OnCbnEditchangeLstct)
+	ON_CBN_EDITCHANGE(IDC_LSTPDT,&CviewCaptureDlg::OnCbnEditchangeLstpdt)
+	ON_CBN_EDITCHANGE(IDC_LSTSAL,&CviewCaptureDlg::OnCbnEditchangeLstsal)
+	ON_CBN_EDITCHANGE(IDC_LSTSDT,&CviewCaptureDlg::OnCbnEditchangeLstsdt)
 END_MESSAGE_MAP()
 
 
@@ -584,10 +589,30 @@ void CviewCaptureDlg::updateDropdown(int ctrl, int reg) {
 		((CComboBox*)GetDlgItem(IDC_LSTDEFAULTS))->SetCurSel(-1);
 	}
 }
+// forcing an address into the register by making it negative
+void CviewCaptureDlg::forceDropdown(int ctrl, int reg) {
+	char buf[128];
+	buf[0]='\0';
+
+	((CComboBox*)GetDlgItem(ctrl))->GetWindowTextA(buf,128);
+	if (isxdigit(buf[0])) {
+		VDPREG[reg] = -(strtol(buf, NULL, 16));
+
+		sprintf(buf, "%04X", -VDPREG[reg]);
+		((CEdit*)GetDlgItem(IDC_TXTR0+reg))->SetWindowTextA(buf);
+
+		UpdateDisplay();
+		((CComboBox*)GetDlgItem(IDC_LSTDEFAULTS))->SetCurSel(-1);
+	}
+}
 
 void CviewCaptureDlg::OnCbnSelchangeLstsit()
 {
 	updateDropdown(IDC_LSTSIT, 2);
+}
+void CviewCaptureDlg::OnCbnEditchangeLstsit()
+{
+	forceDropdown(IDC_LSTSIT, 2);
 }
 
 void CviewCaptureDlg::OnCbnSelchangeLstct()
@@ -613,6 +638,10 @@ void CviewCaptureDlg::OnCbnSelchangeLstct()
 	} else {
 		updateDropdown(IDC_LSTCT, 3);
 	}
+}
+void CviewCaptureDlg::OnCbnEditchangeLstct()
+{
+	forceDropdown(IDC_LSTCT, 3);
 }
 
 
@@ -640,16 +669,28 @@ void CviewCaptureDlg::OnCbnSelchangeLstpdt()
 		updateDropdown(IDC_LSTPDT, 4);
 	}
 }
+void CviewCaptureDlg::OnCbnEditchangeLstpdt()
+{
+	forceDropdown(IDC_LSTPDT, 4);
+}
 
 
 void CviewCaptureDlg::OnCbnSelchangeLstsal()
 {
 	updateDropdown(IDC_LSTSAL, 5);
 }
+void CviewCaptureDlg::OnCbnEditchangeLstsal()
+{
+	forceDropdown(IDC_LSTSAL, 5);
+}
 
 void CviewCaptureDlg::OnCbnSelchangeLstsdt()
 {
 	updateDropdown(IDC_LSTSDT, 6);
+}
+void CviewCaptureDlg::OnCbnEditchangeLstsdt()
+{
+	forceDropdown(IDC_LSTSDT, 6);
 }
 
 // the masks are a bit of a pain in the ass in any event
